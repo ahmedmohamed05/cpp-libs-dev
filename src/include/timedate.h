@@ -5,7 +5,7 @@
 #include <iostream>
 #include <string>
 
-// Default format is DD/MM/YYYY/HH:MM:SS
+// Default format is DD/MM/YYYY/HH/MM/SS
 class TimeDate {
 private:
   short _year, _month, _day, _hour, _minute, _second;
@@ -17,6 +17,7 @@ public:
   // ************************************************************
   TimeDate() { *this = getTodayTimeDate(); }
 
+  // Date format is DD/MM/YYYY/HH/MM/SS, if "/" is your separator
   TimeDate(const std::string &date, std::string separator = "/") {
     setTimeDate(date, separator);
     if (!isValidTimeDate(_day, _month, _year, _hour, _minute, _second)) {
@@ -36,64 +37,6 @@ public:
       separator = "/";
     _separator = separator;
   }
-
-  // TimeDate(const TimeDate *tm) { *this = *tm; }
-
-  // ***********************************************************
-  // *********************** Second Methods ********************
-  // ***********************************************************
-
-  // Returns false if newSecond is invalid
-  bool setSecond(short newSecond) {
-    if (!isValidSecond(newSecond))
-      return false;
-
-    _second = newSecond;
-    return true;
-  }
-
-  short getSecond() const { return _second; }
-
-  // Checks if the given second is 0 <= second <= 59
-  static bool isValidSecond(short second) {
-    return (0 <= second && second <= 59);
-  }
-
-  // ***********************************************************
-  // *********************** Minute Methods ********************
-  // ***********************************************************
-
-  // Returns false if newSecond is invalid
-  bool setMinute(short newMinute) {
-    if (!isValidMinute(newMinute))
-      return false;
-
-    _minute = newMinute;
-    return true;
-  }
-
-  short getMinute() const { return _minute; }
-
-  static bool isValidMinute(short minute) {
-    return (1 <= minute && minute <= 59);
-  }
-
-  // ***********************************************************
-  // *********************** Minute Methods ********************
-  // ***********************************************************
-
-  // Returns false if newHour is invalid
-  bool setHour(short newHour) {
-    if (!isValidHour(newHour))
-      return false;
-
-    _hour = newHour;
-    return true;
-  }
-
-  short getHour() const { return _hour; }
-
-  static bool isValidHour(short Hour) { return (0 <= Hour && Hour <= 23); }
 
   // ***********************************************************
   // *********************** Day Methods ***********************
@@ -119,16 +62,47 @@ public:
 
   short getDay() const { return _day; }
 
-  static bool isValidDay(short dayOrder, short month, short year) {
-    int monthDays = getMonthDays(month, year);
-    return (1 <= dayOrder && dayOrder <= monthDays);
+  static bool isLastDayInMonth(const TimeDate &td) {
+    return td.getMonthDays() == td.getDay();
   }
-
-  static bool isLastDayInMonth(const TimeDate &date) {
-    return date.getMonthDays() == date.getDay();
-  }
-
   bool isLastDayInMonth() const { return isLastDayInMonth(*this); }
+
+  // TODO: make a better way to count days and not taking a copy from td
+  static int daysUntilEndOfYear(TimeDate td) {
+    int days = 0;
+    while (!td.isEndOfYear()) {
+      days++;
+      td.increaseByOneDay();
+    }
+    return days;
+  }
+  int daysUntilEndOfYear() const { return daysUntilEndOfYear(*this); }
+
+  static void increaseByOneDay(TimeDate &td) {
+    int day = td.getDay() + 1;
+    if (day > td.getMonthDays()) {
+      td.setDay(1);
+      increaseByOneMonth(td);
+    } else {
+      td.setDay(day);
+    }
+  }
+  void increaseByOneDay() { increaseByOneDay(*this); }
+
+  // returns -1 if it's invalid month
+  static short getMonthDays(short month, short year) {
+    if (!isValidMonth(month)) {
+      return -1;
+    }
+
+    short numberOfDays[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    return (month == 2) ? (isLeapYear(year) ? 29 : 28)
+                        : numberOfDays[month - 1];
+  }
+  short getMonthDays() const { return getMonthDays(_month, _year); }
+
+  static short getYearDays(short year) { return isLeapYear(year) ? 366 : 365; }
+  short getYearDays() { return getYearDays(_year); }
 
   // *************************************************************
   // *********************** Month Methods ***********************
@@ -142,91 +116,65 @@ public:
     _month = _month;
     return true;
   }
+
   short getMonth() const { return _month; }
 
   // Returns December if month not found
-  static std::string findMonthFullName(short monthOrder) {
-    if (monthOrder < 1 || monthOrder > 12)
-      return "Dec";
-
-    std::string *arr = getMonthsFullNames();
-    std::string monthName = arr[monthOrder];
-    delete[] arr;
-    return monthName;
-  }
-
-  // Returns December if month not found
-  std::string findMonthFullName() const { return findMonthFullName(_month); }
+  std::string getMonthFullName() const { return findMonthFullName(_month); }
 
   // Returns Dec if month not found
-  static std::string findMonthShortName(short monthOrder) {
-    if (monthOrder < 1 || monthOrder > 12)
-      return "Dec";
-
-    std::string *arr = getMonthsShortNames();
-    std::string monthName = arr[monthOrder];
-    delete[] arr;
-    return monthName;
-  }
-
-  // Returns Dec if month not found
-  std::string findMonthShortName() const { return findMonthShortName(_month); }
-
-  // Dont forget to DELETE THE ARRAY
-  static std::string *getMonthsShortNames() {
-    std::string *arr =
-        new std::string[12]("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
-                            "Aug", "Sep", "Oct", "Nov", "Dec");
-
-    return arr;
-  }
-
-  // Dont forget to DELETE THE ARRAY
-  static std::string *getMonthsFullNames() {
-    std::string *arr = new std::string[12](
-        "January", "February", "March", "April", "May", "June", "July",
-        "August", "September", "October", "November", "December");
-
-    return arr;
-  }
-
-  static bool isValidMonth(short month) { return (month >= 1 && month <= 12); }
-
-  static bool isValidMonth(std::string monthName) {
-    std::string *fullNamesArr = getMonthsFullNames();
-    std::string *shortNamesArr = getMonthsShortNames();
-    for (int i = 0; i < 12; i++) {
-      if (monthName == fullNamesArr[i] || monthName == shortNamesArr[i]) {
-        delete[] fullNamesArr;
-        delete[] shortNamesArr;
-        return true;
-      }
-    }
-    delete[] fullNamesArr;
-    delete[] shortNamesArr;
-    return false;
-  }
-
-  // returns -1 if it's invalid month
-  static short getMonthDays(short month, short year) {
-    if (!isValidMonth(month)) {
-      return -1;
-    }
-
-    short numberOfDays[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    return (month == 2) ? (isLeapYear(year) ? 29 : 28)
-                        : numberOfDays[month - 1];
-  }
-
-  short getMonthDays() const { return getMonthDays(_month, _year); }
+  std::string getMonthShortName() const { return findMonthShortName(_month); }
 
   static bool isLastMonth(short month) { return month == 12; }
-
-  static bool isLastMonth(const TimeDate &date) {
-    return isLastMonth(date.getMonth());
-  }
-
   bool isLastMonth() const { return isLastMonth(_month); }
+
+  static void increaseByOneMonth(TimeDate &td) {
+    int month = td.getMonth() + 1;
+
+    if (month > 12) {
+      td.setMonth(1);
+      increaseByOneYear(td);
+    } else {
+      td.setMonth(month);
+    }
+
+    const int monthDays = td.getMonthDays();
+    if (td.getDay() > monthDays) {
+      td.setDay(monthDays);
+    }
+  }
+  void increaseByOneMonth() { increaseByOneMonth(*this); }
+
+  static void decreaseByOneMonth(TimeDate &td) {
+    int test = td.getMonth() - 1;
+
+    if (test == 0) {
+      td.setMonth(12);
+      decreaseByOneYear(td);
+    } else {
+      td.setMonth(test);
+    }
+
+    const int monthDays = td.getMonthDays();
+    if (td.getDay() > monthDays) {
+      td.setDay(monthDays);
+    }
+  }
+  void decreaseByOneMonth() { decreaseByOneMonth(*this); }
+
+  static void increaseByXMonths(int months, TimeDate &td) {
+    for (int i = 1; i <= months; i++)
+      td.increaseByOneMonth();
+  }
+  void increaseByXMonths(int months) { increaseByXMonths(months, *this); }
+
+  static void decreaseByXMonths(int monthsToRemove, TimeDate &date) {
+    for (int i = 1; i <= monthsToRemove; i++)
+      date.decreaseByOneMonth();
+  }
+  void decreaseByXMonths(int monthsToRemove) {
+    decreaseByXMonths(monthsToRemove, *this);
+  }
 
   // ************************************************************
   // *********************** Year methods ***********************
@@ -246,10 +194,7 @@ public:
   static bool isLeapYear(short year) {
     return (year % 400 == 0 || (year % 4 == 0 && year % 100 != 0));
   }
-
   bool isLeapYear() const { return isLeapYear(_year); }
-
-  static bool isValidYear(short year) { return year > 0; }
 
   static void increaseByOneYear(TimeDate &date) {
     if (date.getDay() == 29 && date.getMonth() == 2 && date.isLeapYear()) {
@@ -257,7 +202,6 @@ public:
     }
     date.setYear(date.getYear() + 1);
   }
-
   void increaseByOneYear() { increaseByOneYear(*this); }
 
   static void decreaseByOneYear(TimeDate &date) {
@@ -266,50 +210,102 @@ public:
     }
     date.setYear(date.getYear() - 1);
   }
-
   void decreaseByOneYear() { decreaseByOneYear(*this); }
 
-  static void increaseByXYears(TimeDate &date, const int &years) {
+  static void increaseByXYears(int years, TimeDate &date) {
     if (date.getDay() == 29 && date.getMonth() == 2 && date.isLeapYear()) {
       date.setDay(28);
     }
     date.setYear(date.getYear() + years);
   }
-  void increaseByXYears(const int &years) { increaseByXYears(*this, years); }
+  void increaseByXYears(int years) { increaseByXYears(years, *this); }
 
-  static void decreaseByXYears(TimeDate &date, int yearsToRemove) {
-    if (yearsToRemove >= date.getYear())
+  static void decreaseByXYears(int yearsToRemove, TimeDate &td) {
+    if (yearsToRemove >= td.getYear())
       return;
 
-    if (date.getDay() == 29 && date.getMonth() == 2 && date.isLeapYear()) {
-      date.setDay(28);
+    if (td.getDay() == 29 && td.getMonth() == 2 && td.isLeapYear()) {
+      td.setDay(28);
     }
 
-    date.setYear(date.getYear() - yearsToRemove);
+    td.setYear(td.getYear() - yearsToRemove);
   }
-  void decreaseByXYears(const int &yearsToRemove) {
-    decreaseByXYears(*this, yearsToRemove);
+  void decreaseByXYears(int yearsToRemove) {
+    decreaseByXYears(yearsToRemove, *this);
   }
 
-  static short getYearDays(short year) { return isLeapYear(year) ? 366 : 365; }
-  short getYearDays() { return getYearDays(this->getYear()); }
+  static bool isEndOfYear(const TimeDate &td) {
+    return td.isLastMonth() && td.isLastDayInMonth();
+  }
+  bool isEndOfYear() const { return isEndOfYear(*this); }
+
+  // ***********************************************************
+  // *********************** Hours Methods ********************
+  // ***********************************************************
+
+  // Returns false if newHour is invalid
+  bool setHour(short newHour) {
+    if (!isValidHour(newHour))
+      return false;
+
+    _hour = newHour;
+    return true;
+  }
+
+  short getHour() const { return _hour; }
+
+  static unsigned short getMonthHours(short month, short year) {
+    return getMonthDays(month, year) * 24;
+  }
+  unsigned short getMonthHours() const { return getMonthHours(_month, _year); }
 
   static short getYearHours(short year) { return getYearDays(year) * 24; }
-  short getYearHours() { return getYearHours(this->getYear()); }
+  short getYearHours() const { return getYearHours(_year); }
+
+  // ***********************************************************
+  // *********************** Minutes Methods ********************
+  // ***********************************************************
+
+  // Returns false if newSecond is invalid
+  bool setMinute(short newMinute) {
+    if (!isValidMinute(newMinute))
+      return false;
+
+    _minute = newMinute;
+    return true;
+  }
+
+  short getMinute() const { return _minute; }
+
+  static unsigned short getMonthMinutes(short month, short year) {
+    return getMonthHours(month, year) * 60;
+  }
+  unsigned short getMonthMinutes() const {
+    return getMonthMinutes(_month, _year);
+  }
 
   static unsigned getYearMinutes(short year) { return getYearHours(year) * 60; }
-  unsigned getYearMinutes() { return getYearMinutes(this->getYear()); }
+  unsigned getYearMinutes() const { return getYearMinutes(_year); }
+
+  // ***********************************************************
+  // *********************** Seconds Methods ********************
+  // ***********************************************************
+
+  // Returns false if newSecond is invalid
+  bool setSecond(short newSecond) {
+    if (!isValidSecond(newSecond))
+      return false;
+
+    _second = newSecond;
+    return true;
+  }
+
+  short getSecond() const { return _second; }
 
   static unsigned getYearSeconds(short year) {
     return getYearMinutes(year) * 60;
   }
-  unsigned getYearSeconds() { return getYearSeconds(this->getYear()); }
-
-  static bool isEndOfYear(const TimeDate &date) {
-    return date.isLastMonth() && date.isLastDayInMonth();
-  }
-
-  bool isEndOfYear() const { return isEndOfYear(*this); }
+  unsigned getYearSeconds() const { return getYearSeconds(_year); }
 
   // ************************************************************
   // *********************** Separator Methods ******************
@@ -406,6 +402,85 @@ public:
       return nullptr;
 
     return new TimeDate(day, month, year, hour, minute, second, separator);
+  }
+
+  // ************************************************************
+  // **************** General Static Methods ********************
+  // ************************************************************
+
+  static bool isValidDay(short dayOrder, short month, short year) {
+    int monthDays = getMonthDays(month, year);
+    return (1 <= dayOrder && dayOrder <= monthDays);
+  }
+
+  // Returns December if month not found
+  static std::string findMonthFullName(short monthOrder) {
+    if (!isValidMonth(monthOrder))
+      return "Dec";
+
+    std::string *arr = getMonthsFullNames();
+    std::string monthName = arr[monthOrder];
+    delete[] arr;
+    return monthName;
+  }
+
+  // Returns Dec if month not found
+  static std::string findMonthShortName(short monthOrder) {
+    if (!isValidMonth(monthOrder))
+      return "Dec";
+
+    std::string *arr = getMonthsShortNames();
+    std::string monthName = arr[monthOrder];
+    delete[] arr;
+    return monthName;
+  }
+
+  // Dont forget to DELETE THE ARRAY
+  static std::string *getMonthsShortNames() {
+    std::string *arr =
+        new std::string[12]("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
+                            "Aug", "Sep", "Oct", "Nov", "Dec");
+
+    return arr;
+  }
+
+  // Dont forget to DELETE THE ARRAY
+  static std::string *getMonthsFullNames() {
+    std::string *arr = new std::string[12](
+        "January", "February", "March", "April", "May", "June", "July",
+        "August", "September", "October", "November", "December");
+
+    return arr;
+  }
+
+  static bool isValidMonth(short month) { return (month >= 1 && month <= 12); }
+
+  static bool isValidMonth(std::string monthName) {
+    std::string *fullNamesArr = getMonthsFullNames();
+    std::string *shortNamesArr = getMonthsShortNames();
+    for (int i = 0; i < 12; i++) {
+      if (monthName == fullNamesArr[i] || monthName == shortNamesArr[i]) {
+        delete[] fullNamesArr;
+        delete[] shortNamesArr;
+        return true;
+      }
+    }
+    delete[] fullNamesArr;
+    delete[] shortNamesArr;
+    return false;
+  }
+
+  static bool isValidYear(short year) { return year > 0; }
+
+  static bool isValidHour(short Hour) { return (0 <= Hour && Hour <= 23); }
+
+  static bool isValidMinute(short minute) {
+    return (1 <= minute && minute <= 59);
+  }
+
+  // Checks if the given second is 0 <= second <= 59
+  static bool isValidSecond(short second) {
+    return (0 <= second && second <= 59);
   }
 };
 
