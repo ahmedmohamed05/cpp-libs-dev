@@ -162,7 +162,7 @@ public:
       td.increaseByOneDay();
     }
   }
-  void increaseByXDays(int numberOfDays) {
+  void increaseByXDays(unsigned numberOfDays) {
     increaseByXDays(*this, numberOfDays);
   }
 
@@ -207,10 +207,48 @@ public:
   static short getYearDays(short year) { return isLeapYear(year) ? 366 : 365; }
   short getYearDays() { return getYearDays(_year); }
 
+  static bool isBusinessDay(const TimeDate &td) { return !isWeekEnd(td); }
+  bool isBusinessDay() const { return isBusinessDay(*this); }
+
+  // ***********************************************************
+  // *********************** Week Methods **********************
+  // ***********************************************************
+
   static short daysUntilEndOfWeek(const TimeDate &td) {
     return 6 - td.getDayOrderInWeek();
   }
   short daysUntilEndOfWeek() { return daysUntilEndOfWeek(*this); }
+
+  static bool isEndOfWeek(const TimeDate &td) {
+    return td.getDayShortName() == "Sat";
+  }
+  bool isEndOfWeek() const { return isEndOfWeek(*this); }
+
+  static bool isWeekEnd(const TimeDate &td) {
+    std::string dayName = td.getDayShortName();
+    return dayName == "Fri" || dayName == "Sat";
+  }
+  bool isWeekEnd() const { return isWeekEnd(*this); }
+
+  static void increaseByOneWeek(TimeDate &td) { td.increaseByXDays(7); }
+  void increaseByOneWeek() { increaseByOneWeek(*this); }
+
+  static void decreaseByOneWeek(TimeDate &td) { td.decreaseByXDays(7); }
+  void decreaseByOneWeek() { decreaseByOneWeek(*this); }
+
+  static void increaseByXWeek(TimeDate &td, unsigned numberOfWeeks) {
+    td.increaseByXDays(7 * numberOfWeeks);
+  }
+  void increaseByXWeek(unsigned numberOfWeeks) {
+    increaseByXWeek(*this, numberOfWeeks);
+  }
+
+  static void decreaseByXWeek(TimeDate &td, unsigned numberOfWeeks) {
+    td.decreaseByXDays(7 * numberOfWeeks);
+  }
+  void decreaseByXWeek(unsigned numberOfWeeks) {
+    decreaseByXWeek(*this, numberOfWeeks);
+  }
 
   // *************************************************************
   // *********************** Month Methods ***********************
@@ -346,6 +384,12 @@ public:
     return td.isLastMonth() && td.isLastDayInMonth();
   }
   bool isEndOfYear() const { return isEndOfYear(*this); }
+
+  // Count from 1/1 from the same year
+  static short getDayOrderInYear(const TimeDate &td) {
+    return differenceBetweenTimeDates(TimeDate(1, 1, td.getYear(), 0, 0, 0),
+                                      td);
+  }
 
   // ***********************************************************
   // *********************** Hours Methods *********************
@@ -505,14 +549,95 @@ public:
   // **************** General Static Methods ********************
   // ************************************************************
 
+  static bool isDateInsideRange(TimeDate tdToCheck, TimeDate from,
+                                TimeDate to) {
+    if (tdToCheck == from || tdToCheck == to)
+      return true;
+
+    if (tdToCheck > from && tdToCheck < to)
+      return true;
+
+    return false;
+  }
+
+  // BUG: fix here
+  static unsigned calculateAgeInDays(const TimeDate &birthDay) {
+    TimeDate today;
+    int ageInDays = 0;
+
+    while (birthDay < today) {
+      today.decreaseByOneDay();
+      ageInDays++;
+    }
+
+    return ageInDays;
+  }
+
+  // TODO: Find better way avoid copying timedates
+
+  static short calculateBusinessDays(TimeDate from, TimeDate to) {
+    if (to > from) {
+      return -1;
+    }
+    short days = 0;
+    while (to != from) {
+      if (from.isBusinessDay()) {
+        days++;
+      }
+      from.increaseByOneDay();
+    }
+
+    return days;
+  }
+
+  // TODO: Find better way avoid copying timedates
+
+  static short calculateVacationDays(TimeDate from, TimeDate to) {
+    if (to > from) {
+      return -1;
+    }
+    short days = 0;
+    while (to != from) {
+      if (from.isWeekEnd()) {
+        days++;
+      }
+      from.increaseByOneDay();
+    }
+    return days;
+  }
+
+  // TODO: Find better way avoid copying timedates
+
+  static unsigned differenceBetweenTimeDates(TimeDate td1, TimeDate td2) {
+    int difference = 0;
+    bool multiple = false;
+
+    if (td1 > td2) {
+      td1.swap(td2);
+      multiple = true;
+    }
+
+    while (td1 != td2) {
+      td1.increaseByOneDay();
+      difference++;
+    }
+
+    return multiple ? difference * -1 : difference;
+  }
+
   // You can use "==" operator it's overloaded
   static bool areTimeDatesEqual(const TimeDate &td1, const TimeDate &td2) {
     return td1 == td2;
   }
 
-  static bool isDate1AfterDate2(const TimeDate &d1, const TimeDate &d2) {
-    if (d1 == d2)
-      return false;
+  // You can use ">" operator it's overloaded
+  static bool isTm1AfterTm2(const TimeDate &d1, const TimeDate &d2) {
+    return d1 > d2;
+  }
+
+  // You can use "<" operator it's overloaded
+  static bool isTm1BeforeTm2(const TimeDate &d1, const TimeDate &d2) {
+    return d1 < d2;
   }
 
   static void swapTimeDates(TimeDate &td1, TimeDate &td2) {
@@ -665,7 +790,7 @@ public:
 
   bool operator!=(const TimeDate &other) const { return !(*this == other); }
 
-  bool operator>(const TimeDate &other) {
+  bool operator>(const TimeDate &other) const {
     if (_year > other.getYear())
       return true;
     if (_month > other.getMonth())
@@ -682,7 +807,7 @@ public:
     return false;
   }
 
-  bool operator<(const TimeDate &other) { return !(*this > other); }
+  bool operator<(const TimeDate &other) const { return !(*this > other); }
 };
 
 std::ostream &operator<<(std::ostream &os, const TimeDate &date) {

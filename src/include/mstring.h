@@ -22,7 +22,7 @@ public:
   std::string getValue() const { return _value; }
   void setValue(std::string value) { _value = value; }
 
-  void print() { std::cout << _value << std::endl; }
+  void print() const { std::cout << _value << std::endl; }
 
   void clear() { _value = ""; }
 

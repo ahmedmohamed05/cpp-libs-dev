@@ -2,14 +2,9 @@
 #include <iostream>
 
 int main() {
-  TimeDate tm("3/12/2020/1/30/00");
-
-  TimeDate tm2(tm);
-
-  TimeDate tm3;
-  tm3 = tm;
-
-  std::cout << tm2 << '\n';
+  TimeDate birthday("4/8/2005/0/0/0");
+  std::cout << birthday << '\n';
+  std::cout << TimeDate::calculateAgeInDays(birthday) << '\n';
 
   return 0;
 }
