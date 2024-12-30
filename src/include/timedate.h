@@ -1,6 +1,7 @@
 #ifndef DATE
 #define DATE
 #include "mstring.h"
+#include <array>
 #include <ctime>
 #include <iostream>
 #include <string>
@@ -62,6 +63,67 @@ public:
 
   short getDay() const { return _day; }
 
+  short getDayIndex() const { return _day - 1; }
+
+  // Returns -1 if invalid input
+  static short getDayOrderInWeek(short day, short month, short year) {
+    if (!isValidDate(day, month, year))
+      return -1;
+
+    short a = (14 - month) / 12;
+    short y = year - a;
+    short m = month + 12 * a - 2;
+    short dayIndex = (day + y + y / 4 - y / 100 + y / 400 + (31 * m) / 12) % 7;
+
+    return dayIndex;
+  }
+  short getDayOrderInWeek() const {
+    return getDayOrderInWeek(_day, _month, _year);
+  }
+
+  // Return Sunday if not found or invalid input
+  static std::string getDayFullName(short day, short month, short year) {
+    short dayOrder = getDayOrderInWeek(day, month, year);
+    if (dayOrder == -1)
+      return "Sunday";
+    const auto &arr = getDaysFullNames();
+    return arr[dayOrder];
+  }
+  std::string getDayFullName() const {
+    return getDayFullName(_day, _month, _year);
+  }
+
+  // Return Sun if not found or invalid input
+  static std::string getDayShortName(short day, short month, short year) {
+    short dayOrder = getDayOrderInWeek(day, month, year);
+    if (dayOrder == -1)
+      return "Sun";
+    const auto &arr = getDaysShortNames();
+    return arr[dayOrder];
+  }
+  std::string getDayShortName() const {
+    return getDayShortName(_day, _month, _year);
+  }
+
+  // Check if the given int is Valid day
+  static bool isValidDayOrder(short day) { return (1 <= day && day <= 7); }
+  bool isValidDayOrder() const { return isValidDayOrder(_day); }
+
+  // Check if the given string is a Valid day name
+  static bool isValidDayOrder(std::string dayName) {
+    const auto &shortDaysNames = getDaysShortNames();
+    const auto &fullDaysName = getDaysFullNames();
+    Mstring::capitalize(dayName);
+
+    for (std::size_t i = 0; i < shortDaysNames.size(); i++) {
+      if (dayName == shortDaysNames[i] || dayName == fullDaysName[i]) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   static bool isLastDayInMonth(const TimeDate &td) {
     return td.getMonthDays() == td.getDay();
   }
@@ -78,6 +140,11 @@ public:
   }
   int daysUntilEndOfYear() const { return daysUntilEndOfYear(*this); }
 
+  static unsigned daysUntilEndOfMonth(const TimeDate &td) {
+    return td.getMonthDays() - td.getDay();
+  }
+  unsigned daysUntilEndOfMonth() { return daysUntilEndOfMonth(*this); }
+
   static void increaseByOneDay(TimeDate &td) {
     int day = td.getDay() + 1;
     if (day > td.getMonthDays()) {
@@ -88,6 +155,42 @@ public:
     }
   }
   void increaseByOneDay() { increaseByOneDay(*this); }
+
+  // Adding day to Time date
+  static void increaseByXDays(TimeDate td, int numberOfDays) {
+    for (int i = 1; i <= numberOfDays; i++) {
+      td.increaseByOneDay();
+    }
+  }
+  void increaseByXDays(int numberOfDays) {
+    increaseByXDays(*this, numberOfDays);
+  }
+
+  static void decreaseByOneDay(TimeDate &td) {
+    int test = td.getDay() - 1;
+    if (test == 0) {
+      int lastMonthDays = 0;
+      if (td.getMonth() == 1) {
+        lastMonthDays = getMonthDays(12, td.getYear());
+      }
+      lastMonthDays = getMonthDays(td.getMonth() - 1, td.getYear());
+      td.setDay(lastMonthDays);
+
+      decreaseByOneMonth(td);
+    } else {
+      td.setDay(test);
+    }
+  }
+  void decreaseByOneDay() { decreaseByOneDay(*this); }
+
+  static void decreaseByXDays(TimeDate td, int numberOfDays) {
+    for (int i = 1; i <= numberOfDays; i++) {
+      td.decreaseByOneDay();
+    }
+  }
+  void decreaseByXDays(int numberOfDays) {
+    decreaseByXDays(*this, numberOfDays);
+  }
 
   // returns -1 if it's invalid month
   static short getMonthDays(short month, short year) {
@@ -103,6 +206,11 @@ public:
 
   static short getYearDays(short year) { return isLeapYear(year) ? 366 : 365; }
   short getYearDays() { return getYearDays(_year); }
+
+  static short daysUntilEndOfWeek(const TimeDate &td) {
+    return 6 - td.getDayOrderInWeek();
+  }
+  short daysUntilEndOfWeek() { return daysUntilEndOfWeek(*this); }
 
   // *************************************************************
   // *********************** Month Methods ***********************
@@ -240,7 +348,7 @@ public:
   bool isEndOfYear() const { return isEndOfYear(*this); }
 
   // ***********************************************************
-  // *********************** Hours Methods ********************
+  // *********************** Hours Methods *********************
   // ***********************************************************
 
   // Returns false if newHour is invalid
@@ -263,7 +371,7 @@ public:
   short getYearHours() const { return getYearHours(_year); }
 
   // ***********************************************************
-  // *********************** Minutes Methods ********************
+  // *********************** Minutes Methods *******************
   // ***********************************************************
 
   // Returns false if newSecond is invalid
@@ -288,7 +396,7 @@ public:
   unsigned getYearMinutes() const { return getYearMinutes(_year); }
 
   // ***********************************************************
-  // *********************** Seconds Methods ********************
+  // *********************** Seconds Methods *******************
   // ***********************************************************
 
   // Returns false if newSecond is invalid
@@ -325,6 +433,12 @@ public:
   // ************************************************************
   // *********************** Full Date Methods ******************
   // ************************************************************
+
+  void swap(TimeDate &td) {
+    TimeDate temp = *this;
+    *this = td;
+    td = temp;
+  }
 
   // If the given date is invalid, the data won't change
   bool setTimeDate(short day, short month, short year, short hour, short minute,
@@ -365,28 +479,9 @@ public:
                     now->tm_hour, now->tm_min, now->tm_sec, separator);
   }
 
-  std::string getStr() {
-    std::string str;
-    str += std::to_string(_day) + _separator;
-    str += std::to_string(_month) + _separator;
-    str += std::to_string(_year) + _separator;
-    str += std::to_string(_hour) + _separator;
-    str += std::to_string(_minute) + _separator;
-    str += std::to_string(_second);
-    return str;
-  }
-
-  static bool isValidTimeDate(short day, short month, short year, short hour,
-                              short minute, short second) {
-
-    return (isValidYear(year) && isValidMonth(month) &&
-            isValidDay(day, month, year) && isValidHour(hour) &&
-            isValidMinute(minute) && isValidSecond(second));
-  }
-
   // PASS the correct separator, returns nullptr if something went wrong
   static TimeDate *convertStringToTimeDate(const std::string &date,
-                                           const std::string separator) {
+                                           const std::string &separator) {
     std::vector<std::string> vDate = Mstring::split(date, separator);
     if (vDate.empty())
       return nullptr;
@@ -404,13 +499,72 @@ public:
     return new TimeDate(day, month, year, hour, minute, second, separator);
   }
 
+  std::string getAsString() const { return convertTimeDateToString(*this); }
+
   // ************************************************************
   // **************** General Static Methods ********************
   // ************************************************************
 
-  static bool isValidDay(short dayOrder, short month, short year) {
-    int monthDays = getMonthDays(month, year);
-    return (1 <= dayOrder && dayOrder <= monthDays);
+  // You can use "==" operator it's overloaded
+  static bool areTimeDatesEqual(const TimeDate &td1, const TimeDate &td2) {
+    return td1 == td2;
+  }
+
+  static bool isDate1AfterDate2(const TimeDate &d1, const TimeDate &d2) {
+    if (d1 == d2)
+      return false;
+  }
+
+  static void swapTimeDates(TimeDate &td1, TimeDate &td2) {
+    TimeDate x = td1;
+    td1 = td2;
+    td2 = x;
+  }
+
+  // Return date from number of days from (1 / 1 / given year)
+  static TimeDate *getTimeDateFromNumberOfDays(int days, int year,
+                                               std::string separator = "/") {
+    int d = days;
+    int m = 1;
+    int y = year;
+
+    short monthDays = getMonthDays(m, y);
+
+    while (d > monthDays) {
+      d = d - monthDays;
+      m++;
+      if (m == 13) {
+        m = 1;
+        y++;
+      }
+
+      monthDays = getMonthDays(m, y);
+    }
+
+    std::string date = "";
+    date += std::to_string(d) + separator;
+    date += std::to_string(m) + separator;
+    date += std::to_string(y);
+    // return Date(d, m, y);
+    return new TimeDate(d, m, y, 0, 0, 0, separator);
+  }
+
+  static bool isValidTimeDate(short day, short month, short year, short hour,
+                              short minute, short second) {
+
+    return (isValidYear(year) && isValidMonth(month) &&
+            isValidDay(day, month, year) && isValidHour(hour) &&
+            isValidMinute(minute) && isValidSecond(second));
+  }
+
+  static std::string convertTimeDateToString(const TimeDate &td) {
+    std::string str = std::to_string(td.getDay()) + td.getSeparator();
+    str = std::to_string(td.getMonth()) + td.getSeparator();
+    str = std::to_string(td.getYear()) + td.getSeparator();
+    str = std::to_string(td.getHour()) + td.getSeparator();
+    str = std::to_string(td.getMinute()) + td.getSeparator();
+    str = std::to_string(td.getSecond());
+    return str;
   }
 
   // Returns December if month not found
@@ -418,9 +572,8 @@ public:
     if (!isValidMonth(monthOrder))
       return "Dec";
 
-    std::string *arr = getMonthsFullNames();
+    const auto &arr = getMonthsFullNames();
     std::string monthName = arr[monthOrder];
-    delete[] arr;
     return monthName;
   }
 
@@ -429,44 +582,56 @@ public:
     if (!isValidMonth(monthOrder))
       return "Dec";
 
-    std::string *arr = getMonthsShortNames();
+    const auto &arr = getMonthsShortNames();
     std::string monthName = arr[monthOrder];
-    delete[] arr;
     return monthName;
   }
 
-  // Dont forget to DELETE THE ARRAY
-  static std::string *getMonthsShortNames() {
-    std::string *arr =
-        new std::string[12]("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
-                            "Aug", "Sep", "Oct", "Nov", "Dec");
+  static std::array<std::string, 12> getMonthsShortNames() {
+    static std::array<std::string, 12> arr = {"Jan", "Feb", "Mar", "Apr",
+                                              "May", "Jun", "Jul", "Aug",
+                                              "Sep", "Oct", "Nov", "Dec"};
 
     return arr;
   }
 
-  // Dont forget to DELETE THE ARRAY
-  static std::string *getMonthsFullNames() {
-    std::string *arr = new std::string[12](
-        "January", "February", "March", "April", "May", "June", "July",
-        "August", "September", "October", "November", "December");
+  static std::array<std::string, 12> getMonthsFullNames() {
+    static std::array<std::string, 12> arr = {
+        "January", "February", "March",     "April",   "May",      "June",
+        "July",    "August",   "September", "October", "November", "December"};
 
     return arr;
+  }
+
+  static std::array<std::string, 7> getDaysFullNames() {
+    static std::array<std::string, 7> arr = {"Sunday",    "Monday",   "Tuesday",
+                                             "Wednesday", "Thursday", "Friday",
+                                             "Saturday"};
+
+    return arr;
+  }
+
+  static std::array<std::string, 7> getDaysShortNames() {
+    static std::array<std::string, 7> arr = {"Sun", "Mon", "Tue", "Wed",
+                                             "Thu", "Fri", "Sat"};
+    return arr;
+  }
+
+  static bool isValidDay(short dayOrder, short month, short year) {
+    int monthDays = getMonthDays(month, year);
+    return (1 <= dayOrder && dayOrder <= monthDays);
   }
 
   static bool isValidMonth(short month) { return (month >= 1 && month <= 12); }
 
   static bool isValidMonth(std::string monthName) {
-    std::string *fullNamesArr = getMonthsFullNames();
-    std::string *shortNamesArr = getMonthsShortNames();
+    const auto &fullNamesArr = getMonthsFullNames();
+    const auto &shortNamesArr = getMonthsShortNames();
     for (int i = 0; i < 12; i++) {
       if (monthName == fullNamesArr[i] || monthName == shortNamesArr[i]) {
-        delete[] fullNamesArr;
-        delete[] shortNamesArr;
         return true;
       }
     }
-    delete[] fullNamesArr;
-    delete[] shortNamesArr;
     return false;
   }
 
@@ -475,13 +640,49 @@ public:
   static bool isValidHour(short Hour) { return (0 <= Hour && Hour <= 23); }
 
   static bool isValidMinute(short minute) {
-    return (1 <= minute && minute <= 59);
+    return (0 <= minute && minute <= 59);
   }
 
   // Checks if the given second is 0 <= second <= 59
   static bool isValidSecond(short second) {
     return (0 <= second && second <= 59);
   }
+
+  static bool isValidDate(short day, short month, short year) {
+    return (isValidDay(day, month, year) && isValidMonth(month) &&
+            isValidYear(year));
+  }
+
+  // ************************************************************
+  // **************** Operator Overloading **********************
+  // ************************************************************
+
+  bool operator==(const TimeDate &other) const {
+    return (_day == other.getDay() && _month == other.getMonth() &&
+            _year == other.getYear() && _hour == other.getHour() &&
+            _minute == other.getMinute() && _second == other.getSecond());
+  }
+
+  bool operator!=(const TimeDate &other) const { return !(*this == other); }
+
+  bool operator>(const TimeDate &other) {
+    if (_year > other.getYear())
+      return true;
+    if (_month > other.getMonth())
+      return true;
+    if (_day > other.getDay())
+      return true;
+    if (_hour > other.getHour())
+      return true;
+    if (_minute > other.getMinute())
+      return true;
+    if (_second > other.getSecond())
+      return true;
+
+    return false;
+  }
+
+  bool operator<(const TimeDate &other) { return !(*this > other); }
 };
 
 std::ostream &operator<<(std::ostream &os, const TimeDate &date) {
