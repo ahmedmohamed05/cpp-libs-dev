@@ -185,6 +185,12 @@ template <typename T> void shuffle(std::vector<int> &v) {
     swap<T>(v[randomNumber(1, size) - 1], v[randomNumber(1, size) - 1]);
   }
 }
+template <typename T, std::size_t N> void shuffle(std::array<T, N> &arr) {
+  int size = arr.size();
+  for (int i = 0; i < size; i++) {
+    swap<T>(arr[randomNumber(1, size) - 1], arr[randomNumber(1, size) - 1]);
+  }
+}
 
 std::string repeat(const std::string &str, unsigned times) {
   std::string result = str;
