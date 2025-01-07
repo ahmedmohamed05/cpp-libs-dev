@@ -96,6 +96,23 @@ std::string randomKey(short terms = 4, short termLength = 4,
   return key;
 }
 
+// Split String And Returns vector of strings
+static std::vector<std::string> splitString(std::string str,
+                                            const std::string &delimiter) {
+  std::vector<std::string> vString;
+  std::size_t delimPosition;
+
+  while ((delimPosition = str.find(delimiter)) != str.npos) {
+    vString.push_back(str.substr(0, delimPosition));
+    str.erase(0, delimPosition + delimiter.length());
+  }
+
+  // Pushing last word in string
+  if (str != "")
+    vString.push_back(str);
+  return vString;
+}
+
 template <std::size_t N>
 std::array<std::string, N> randomKeys(short terms = 4, short termLength = 4,
                                       bool useSmallLetters = false) {
