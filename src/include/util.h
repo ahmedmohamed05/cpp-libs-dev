@@ -221,6 +221,14 @@ std::string repeat(const std::string &str, unsigned times) {
 std::string repeat(char c, unsigned times) {
   return repeat(std::to_string(c), times);
 }
+
+template <typename T>
+typename std::enable_if<
+    std::is_arithmetic<T>::value && !std::is_same<T, char>::value, bool>::type
+isNumberBetween(T number, T min, T max) {
+  return (number >= min && number <= max);
+}
+
 }; // namespace util
 
 #endif
