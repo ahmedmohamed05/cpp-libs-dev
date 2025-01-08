@@ -97,7 +97,7 @@ std::string randomKey(short terms = 4, short termLength = 4,
 }
 
 // Split String And Returns vector of strings
-static std::vector<std::string> splitString(std::string str,
+std::vector<std::string> splitString(std::string str,
                                             const std::string &delimiter) {
   std::vector<std::string> vString;
   std::size_t delimPosition;
